@@ -3,39 +3,18 @@
   const C = window.JetRhythmCore;
   const $ = id => document.getElementById(id);
   const MAX_LEGS = 8;
-  const AIRPORTS = {
-    LAS:['Las Vegas','America/Los_Angeles'], LAX:['Los Angeles','America/Los_Angeles'], SFO:['San Francisco','America/Los_Angeles'], SEA:['Seattle','America/Los_Angeles'],
-    JFK:['New York JFK','America/New_York'], EWR:['Newark','America/New_York'], BOS:['Boston','America/New_York'], MIA:['Miami','America/New_York'],
-    IAD:['Washington Dulles','America/New_York'], DCA:['Washington Reagan','America/New_York'], MCO:['Orlando','America/New_York'],
-    DTW:['Detroit','America/Detroit'], ORD:['Chicago O’Hare','America/Chicago'], DFW:['Dallas Fort Worth','America/Chicago'],
-    DEN:['Denver','America/Denver'], PHX:['Phoenix','America/Phoenix'], ATL:['Atlanta','America/New_York'],
-    HNL:['Honolulu','Pacific/Honolulu'], YVR:['Vancouver','America/Vancouver'], YYZ:['Toronto','America/Toronto'], YUL:['Montréal','America/Toronto'],
-    MEX:['Mexico City','America/Mexico_City'], GRU:['São Paulo','America/Sao_Paulo'], EZE:['Buenos Aires','America/Argentina/Buenos_Aires'],
-    LHR:['London Heathrow','Europe/London'], LGW:['London Gatwick','Europe/London'], STN:['London Stansted','Europe/London'],
-    NCL:['Newcastle','Europe/London'], MAN:['Manchester','Europe/London'], EDI:['Edinburgh','Europe/London'], GLA:['Glasgow','Europe/London'],
-    BHX:['Birmingham','Europe/London'], BRS:['Bristol','Europe/London'], DUB:['Dublin','Europe/Dublin'],
-    CDG:['Paris Charles de Gaulle','Europe/Paris'], ORY:['Paris Orly','Europe/Paris'], AMS:['Amsterdam','Europe/Amsterdam'],
-    FRA:['Frankfurt','Europe/Berlin'], MUC:['Munich','Europe/Berlin'], BER:['Berlin','Europe/Berlin'], ZRH:['Zurich','Europe/Zurich'],
-    FCO:['Rome','Europe/Rome'], MXP:['Milan','Europe/Rome'], MAD:['Madrid','Europe/Madrid'], BCN:['Barcelona','Europe/Madrid'],
-    LIS:['Lisbon','Europe/Lisbon'], CPH:['Copenhagen','Europe/Copenhagen'], ARN:['Stockholm','Europe/Stockholm'],
-    OSL:['Oslo','Europe/Oslo'], HEL:['Helsinki','Europe/Helsinki'], ATH:['Athens','Europe/Athens'], IST:['Istanbul','Europe/Istanbul'],
-    DXB:['Dubai','Asia/Dubai'], DOH:['Doha','Asia/Qatar'], AUH:['Abu Dhabi','Asia/Dubai'], DEL:['Delhi','Asia/Kolkata'],
-    BOM:['Mumbai','Asia/Kolkata'], SIN:['Singapore','Asia/Singapore'], HKG:['Hong Kong','Asia/Hong_Kong'],
-    BKK:['Bangkok','Asia/Bangkok'], KUL:['Kuala Lumpur','Asia/Kuala_Lumpur'], ICN:['Seoul Incheon','Asia/Seoul'],
-    HND:['Tokyo Haneda','Asia/Tokyo'], NRT:['Tokyo Narita','Asia/Tokyo'], KIX:['Osaka','Asia/Tokyo'],
-    SYD:['Sydney','Australia/Sydney'], MEL:['Melbourne','Australia/Melbourne'], BNE:['Brisbane','Australia/Brisbane'],
-    PER:['Perth','Australia/Perth'], AKL:['Auckland','Pacific/Auckland'], CPT:['Cape Town','Africa/Johannesburg'],
-    JNB:['Johannesburg','Africa/Johannesburg'], NBO:['Nairobi','Africa/Nairobi']
-  };
-  const commonZones = [...new Set(Object.values(AIRPORTS).map(x => x[1]))];
-  const zones = [...new Set([...(Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : []), ...commonZones, 'UTC'])].sort();
+  const AIRPORTS = window.JetRhythmAirports || {};
+  // The future service is a first-party endpoint, not a third-party API key in public JavaScript.
+  // A flight number and travel date are the only parameters sent when this is configured.
+  const LOOKUP_URL = document.querySelector('meta[name="flight-lookup-url"]')?.content || '';
   let currentInput = null;
   let currentPlan = null;
   let toastTimeout;
   const memory = new Map();
 
   const escape = value => String(value == null ? '' : value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
-  const zoneOptions = selected => zones.map(zone => `<option value="${escape(zone)}" ${zone === selected ? 'selected' : ''}>${escape(zone.replaceAll('_',' '))}</option>`).join('');
+  const localAirportDate = leg => (leg.departure || '').slice(0,10);
+  const airportName = code => AIRPORTS[code] ? `${AIRPORTS[code][0]} (${code})` : code;
   const fmtDate = date => new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeZone:'UTC'}).format(new Date(date + 'T12:00:00Z'));
   const formatInstant = (date,zone) => new Intl.DateTimeFormat('en-GB',{timeZone:zone,weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(date));
 
@@ -101,37 +80,117 @@
     entry.className = 'flight-leg';
     const fromCode = String(leg.from || '').toUpperCase();
     const toCode = String(leg.to || '').toUpperCase();
-    const fromZone = leg.fromZone || (AIRPORTS[fromCode] && AIRPORTS[fromCode][1]) || 'Europe/London';
-    const toZone = leg.toZone || (AIRPORTS[toCode] && AIRPORTS[toCode][1]) || 'Europe/London';
     entry.innerHTML = `<div class="leg-title"><strong>✈ Flight ${count}</strong><button type="button" class="remove-leg text-button" ${count === 1 ? 'hidden' : ''}>Remove</button></div>
-      <div class="leg-fields">
-        <label class="field"><span>Flight number (optional)</span><input class="flight-number" maxlength="12" placeholder="e.g. DL1234" value="${escape(leg.number || '')}"></label>
-        <label class="field"><span>From · airport code</span><input class="from" list="airport-codes" maxlength="3" minlength="3" required placeholder="LAS" value="${escape(fromCode)}" aria-label="Departure airport code"></label>
-        <label class="field"><span>To · airport code</span><input class="to" list="airport-codes" maxlength="3" minlength="3" required placeholder="DTW" value="${escape(toCode)}" aria-label="Arrival airport code"></label>
-        <label class="field"><span>Departs · local time</span><input class="departure" type="datetime-local" required value="${escape(leg.departure || '')}"></label>
-        <label class="field"><span>Arrives · local time</span><input class="arrival" type="datetime-local" required value="${escape(leg.arrival || '')}"></label>
+      <div class="flight-lookup-fields">
+        <label class="field"><span>Flight number</span><input class="flight-number" maxlength="12" placeholder="e.g. BA117" value="${escape(leg.number || '')}" autocomplete="off"></label>
+        <label class="field"><span>Departure date</span><input class="lookup-date" type="date" value="${escape(localAirportDate(leg))}"></label>
+        <button class="btn btn-outline lookup-flight" type="button">Find this flight <span aria-hidden="true">↗</span></button>
       </div>
-      <p class="leg-help">Airport codes select time zones automatically. Check them below, especially around daylight saving changes.</p>
-      <details class="zone-details"><summary>Check or change the time zones for this flight</summary>
-      <div class="form-grid"><label class="field"><span>Departure time zone</span><select class="from-zone" aria-label="Departure time zone">${zoneOptions(fromZone)}</select></label>
-      <label class="field"><span>Arrival time zone</span><select class="to-zone" aria-label="Arrival time zone">${zoneOptions(toZone)}</select></label></div></details>`;
+      <p class="lookup-feedback" role="status" aria-live="polite"></p>
+      <div class="lookup-options" hidden></div>
+      <details class="manual-details" ${!LOOKUP_URL || leg.departure ? 'open' : ''}><summary>Enter the route and ticket times manually</summary>
+        <div class="leg-fields">
+          <label class="field"><span>From · airport code</span><input class="from" list="airport-codes" maxlength="3" minlength="3" required placeholder="LHR" value="${escape(fromCode)}" aria-label="Departure airport code"></label>
+          <label class="field"><span>To · airport code</span><input class="to" list="airport-codes" maxlength="3" minlength="3" required placeholder="JFK" value="${escape(toCode)}" aria-label="Arrival airport code"></label>
+          <label class="field"><span>Departs · local time</span><input class="departure" type="datetime-local" required value="${escape(leg.departure || '')}"></label>
+          <label class="field"><span>Arrives · local time</span><input class="arrival" type="datetime-local" required value="${escape(leg.arrival || '')}"></label>
+        </div>
+        <p class="leg-help airport-zone-status" aria-live="polite"></p>
+      </details>`;
+    const updateAirportStatus = () => {
+      const from = entry.querySelector('.from').value;
+      const to = entry.querySelector('.to').value;
+      const known = [from,to].filter(Boolean).map(code => AIRPORTS[code] ? `${code}: ${AIRPORTS[code][1].replaceAll('_',' ')}` : `${code}: unknown airport`);
+      entry.querySelector('.airport-zone-status').textContent = known.length
+        ? 'Automatic time zones · ' + known.join(' · ') : 'Airport time zones are assigned automatically; no time-zone input is needed.';
+    };
     for (const type of ['from','to']) {
       const field = entry.querySelector('.' + type);
       field.addEventListener('input', () => {
         field.value = field.value.toUpperCase().replace(/[^A-Z]/g,'');
-        const found = AIRPORTS[field.value];
-        if (found) entry.querySelector('.' + type + '-zone').value = found[1];
+        updateAirportStatus();
+        refreshAirportList(field.value);
       });
+      field.addEventListener('focus',() => refreshAirportList(field.value));
     }
+    updateAirportStatus();
+    entry.querySelector('.lookup-flight').addEventListener('click', () => lookupFlight(entry));
     entry.querySelector('.remove-leg').addEventListener('click', () => {
       entry.remove();
       [...holder.children].forEach((el,i) => {
         el.querySelector('.leg-title strong').textContent = '✈ Flight ' + (i + 1);
         el.querySelector('.remove-leg').hidden = i === 0;
       });
+      $('add-leg').disabled = holder.children.length >= MAX_LEGS;
     });
     holder.appendChild(entry);
     $('add-leg').disabled = holder.children.length >= MAX_LEGS;
+  }
+
+  function refreshAirportList(query = '') {
+    const list = $('airport-codes'); if (!list) return;
+    const needle = query.toUpperCase();
+    const matches = Object.entries(AIRPORTS).filter(([code]) => !needle || code.startsWith(needle)).slice(0,100);
+    list.innerHTML = matches.map(([code,[name]]) => `<option value="${code}">${escape(name)}</option>`).join('');
+  }
+
+  function useFlight(entry, flight) {
+    const from = String(flight.from || '').toUpperCase();
+    const to = String(flight.to || '').toUpperCase();
+    if (!AIRPORTS[from] || !AIRPORTS[to] || !/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(flight.departure || '') || !/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(flight.arrival || '')) {
+      throw new Error('This flight record is incomplete. Please use your ticket details instead.');
+    }
+    entry.querySelector('.from').value = from;
+    entry.querySelector('.to').value = to;
+    entry.querySelector('.departure').value = flight.departure;
+    entry.querySelector('.arrival').value = flight.arrival;
+    entry.querySelector('.lookup-date').value = flight.departure.slice(0,10);
+    entry.querySelector('.airport-zone-status').textContent = `Automatic time zones · ${from}: ${AIRPORTS[from][1]} · ${to}: ${AIRPORTS[to][1]}`;
+    entry.querySelector('.manual-details').open = false;
+    entry.querySelector('.lookup-feedback').textContent = `${airportName(from)} → ${airportName(to)} loaded. Check the times against your airline booking.`;
+  }
+
+  async function lookupFlight(entry) {
+    const number = entry.querySelector('.flight-number').value.trim().toUpperCase().replace(/\s+/g,'');
+    const date = entry.querySelector('.lookup-date').value;
+    const feedback = entry.querySelector('.lookup-feedback');
+    const chooser = entry.querySelector('.lookup-options');
+    chooser.hidden = true;
+    if (!/^[A-Z0-9]{3,10}$/.test(number) || !/^\d{4}-\d\d-\d\d$/.test(date)) {
+      feedback.textContent = 'Enter a flight number and departure date to look up the schedule.'; return;
+    }
+    if (!LOOKUP_URL || location.protocol === 'file:') {
+      feedback.textContent = 'Automatic flight schedules are not connected yet. For now, expand the manual details and use your airline booking. You will not need to enter a time zone.';
+      entry.querySelector('.manual-details').open = true;
+      return;
+    }
+    const button = entry.querySelector('.lookup-flight');
+    button.disabled = true; feedback.textContent = 'Looking up the published schedule…';
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(),12000);
+    try {
+      const request = new URL(LOOKUP_URL,location.href);
+      request.searchParams.set('flight',number); request.searchParams.set('date',date);
+      const response = await fetch(request.toString(),{signal:controller.signal,headers:{'Accept':'application/json'},cache:'no-store'});
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Flight schedule lookup is unavailable right now.');
+      const flights = Array.isArray(payload.flights) ? payload.flights : [];
+      if (!flights.length) throw new Error('No published flight found for that number and date. Check your booking or enter ticket details.');
+      const valid = flights.filter(f => AIRPORTS[f.from] && AIRPORTS[f.to]);
+      if (!valid.length) throw new Error('The provider returned airport codes we cannot identify. Please use your booking.');
+      if (valid.length === 1) useFlight(entry,valid[0]);
+      else {
+        chooser.innerHTML = '<label class="field"><span>Multiple matching flights · choose your route</span><select class="lookup-choice">' +
+          valid.map((f,i) => `<option value="${i}">${escape(`${f.from} → ${f.to} · ${f.departure} to ${f.arrival}`)}</option>`).join('') +
+          '</select></label><button type="button" class="btn btn-primary use-lookup">Use selected flight</button>';
+        chooser.hidden = false;
+        chooser.querySelector('.use-lookup').addEventListener('click',() => { useFlight(entry,valid[Number(chooser.querySelector('.lookup-choice').value)]); chooser.hidden = true; });
+        feedback.textContent = 'Several scheduled flights match. Select the correct route from your booking.';
+      }
+    } catch (error) {
+      feedback.textContent = error.name === 'AbortError' ? 'Flight lookup timed out. Enter your ticket details below.' : error.message;
+      entry.querySelector('.manual-details').open = true;
+    } finally { clearTimeout(timeout); button.disabled = false; }
   }
 
   function formData() {
@@ -141,8 +200,8 @@
         number: el.querySelector('.flight-number').value.trim().toUpperCase().slice(0,12),
         from: el.querySelector('.from').value.trim().toUpperCase(),
         to: el.querySelector('.to').value.trim().toUpperCase(),
-        fromZone: el.querySelector('.from-zone').value,
-        toZone: el.querySelector('.to-zone').value,
+        fromZone: AIRPORTS[el.querySelector('.from').value.trim().toUpperCase()]?.[1],
+        toZone: AIRPORTS[el.querySelector('.to').value.trim().toUpperCase()]?.[1],
         departure: el.querySelector('.departure').value,
         arrival: el.querySelector('.arrival').value
       }))
@@ -153,6 +212,7 @@
     if (!Array.isArray(input.legs) || input.legs.length < 1 || input.legs.length > 8) throw new Error('A journey needs one to eight flights.');
     for (const [i,leg] of input.legs.entries()) {
       if (!/^[A-Z]{3}$/.test(leg.from) || !/^[A-Z]{3}$/.test(leg.to)) throw new Error('Flight ' + (i + 1) + ': enter three-letter airport codes.');
+      if (!AIRPORTS[leg.from] || !AIRPORTS[leg.to]) throw new Error('Flight ' + (i + 1) + ': an airport code was not recognised. Check the IATA code on your ticket.');
       if (leg.from === leg.to) throw new Error('Flight ' + (i + 1) + ': arrival and departure airports must differ.');
       if (leg.number && !/^[A-Z0-9 -]{1,12}$/.test(leg.number)) throw new Error('Flight ' + (i + 1) + ': check the flight number.');
       if (i && input.legs[i-1].to !== leg.from) throw new Error('Flight ' + (i+1) + ' does not connect to the previous arrival airport.');
@@ -162,8 +222,9 @@
   function calculate(input, scroll = true) {
     try {
       validate(input);
-      const result = C.plan(input);
-      currentInput = input;
+      const normalised = {...input,legs:input.legs.map(leg => ({...leg,fromZone:AIRPORTS[leg.from][1],toZone:AIRPORTS[leg.to][1]}))};
+      const result = C.plan(normalised);
+      currentInput = normalised;
       currentPlan = result;
       $('form-message').hidden = true;
       render(result,input);
@@ -177,10 +238,46 @@
     }
   }
 
+  // A vertical day-by-day Gantt: each row spans 00:00–24:00 local time.
+  // Windows crossing midnight are split into two bars on the same day track.
+  function chartSegments(times) {
+    if (!times) return [];
+    const start = C.minutes(times[0]);
+    const end = C.minutes(times[1]);
+    if (end > start) return [[start,end]];
+    if (end === start) return [];
+    return [[0,end],[start,1440]];
+  }
+
+  function chartLane(label,times,kind) {
+    const bars = chartSegments(times).map(([start,end]) => {
+      const left = (start/1440*100).toFixed(3);
+      const width = ((end-start)/1440*100).toFixed(3);
+      return `<span class="gantt-bar gantt-${kind}" style="left:${left}%;width:${width}%"></span>`;
+    }).join('');
+    const range = times ? times.join('–') : 'No timed guidance';
+    return `<div class="gantt-lane"><span class="gantt-lane-name">${escape(label)}</span><div class="gantt-track" aria-label="${escape(label)}: ${escape(range)}">${bars}</div><span class="gantt-lane-time">${escape(range)}</span></div>`;
+  }
+
+  function chartHtml(plan) {
+    const days = plan.days.map(day => `<div class="gantt-day-row">
+      <div class="gantt-day-title"><strong>${day.day === 0 ? 'Arrival' : 'Day ' + day.day}</strong><span>${escape(fmtDate(day.date))}</span><small>${day.remainingHours}h shift remaining</small></div>
+      <div class="gantt-day-lanes">
+        ${chartLane('Sleep',day.sleep,'sleep')}
+        ${chartLane('Seek light',day.seekLight,'light')}
+        ${chartLane('Dim light',day.avoidLight,'dark')}
+      </div>
+    </div>`).join('');
+    return `<div class="gantt-legend" aria-label="Chart key"><span><i class="swatch swatch-sleep"></i>Target sleep</span><span><i class="swatch swatch-light"></i>Seek bright light</span><span><i class="swatch swatch-dark"></i>Reduce bright light</span></div>
+      <div class="gantt-scroller" tabindex="0" role="region" aria-label="Scrollable 24-hour schedule">
+        <div class="gantt-inner"><div class="gantt-axis"><span>Destination local time</span><div class="gantt-axis-ticks"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div></div>${days}</div>
+      </div><p class="gantt-footnote">These bars show estimated timing, not measured biological responses. A bar wrapping midnight appears at both ends of the 24-hour scale.</p>`;
+  }
+
   function render(plan,input) {
     $('result-placeholder').hidden = true;
     $('plan-output').hidden = false;
-    $('results-intro').textContent = `${input.legs[0].from} → ${input.legs[input.legs.length-1].to}, arriving ${fmtDate(plan.arrivalDate)}. Times are estimated, with no live flight lookup.`;
+    $('results-intro').textContent = `${input.legs[0].from} → ${input.legs[input.legs.length-1].to}, arriving ${fmtDate(plan.arrivalDate)}. Flight times should always be checked against your airline booking.`;
     const stats = [
       ['Time zone change', (plan.timeDifferenceHours > 0 ? '+' : '') + plan.timeDifferenceHours + ' hours'],
       ['Direction', {advance:'Shift earlier',delay:'Shift later',none:'No shift needed'}[plan.direction]],
@@ -188,13 +285,14 @@
       ['Flights in journey',String(plan.flights.length)]
     ];
     $('summary').innerHTML = stats.map(([label,value]) => `<div class="stat"><small>${escape(label)}</small><strong>${escape(value)}</strong></div>`).join('');
+    $('rhythm-chart').innerHTML = chartHtml(plan);
     let html = '<div class="day-card"><div class="day-head"><strong>Before you fly · ' + escape(plan.origin) + '</strong><span>Preparation</span></div>';
     html += plan.pre.map(day => `<div class="day-detail"><div class="signal"><small>${escape(fmtDate(day.date))} · Sleep</small><strong>${day.bed}–${day.wake}</strong></div><div class="signal"><small>Sleep shift from usual</small><strong>${Math.abs(day.phaseShiftHours).toFixed(2)} hours</strong></div></div>`).join('');
     html += '</div>';
-    html += plan.days.map(day => `<article class="day-card"><div class="day-head"><strong>${day.day === 0 ? 'Arrival day' : 'Day ' + day.day} · ${escape(fmtDate(day.date))}</strong><span>${escape(plan.destination)}</span></div>
+    html += plan.days.map(day => `<details class="day-card day-details"><summary><strong>${day.day === 0 ? 'Arrival day' : 'Day ' + day.day} · ${escape(fmtDate(day.date))}</strong><span>Show guidance</span></summary>
       <div class="day-detail"><div class="signal"><small>Estimated biological wake time</small><strong>${day.bodyWake}</strong></div><div class="signal"><small>Target local sleep window</small><strong>${day.sleep[0]}–${day.sleep[1]}</strong></div>
       ${day.seekLight ? `<div class="signal light"><small>☀ Seek bright light</small><strong>${day.seekLight.join('–')}</strong></div><div class="signal dark"><small>☾ Reduce bright light</small><strong>${day.avoidLight.join('–')}</strong></div>` : '<div class="signal"><small>Estimated alignment</small><strong>Maintain a regular schedule</strong></div>'}
-      <div class="signal"><small>Caffeine cut-off</small><strong>${day.caffeineCutoff}</strong></div><div class="signal"><small>Estimated shift remaining</small><strong>${day.remainingHours} h</strong></div></div></article>`).join('');
+      <div class="signal"><small>Caffeine cut-off</small><strong>${day.caffeineCutoff}</strong></div><div class="signal"><small>Estimated shift remaining</small><strong>${day.remainingHours} h</strong></div></div></details>`).join('');
     $('schedule-list').innerHTML = html;
     $('flight-suggestions').innerHTML = plan.flights.map(flight => {
       let overlap = null;
@@ -325,8 +423,10 @@
   function init() {
     setUpNavigation();
     const list = document.createElement('datalist'); list.id = 'airport-codes';
-    list.innerHTML = Object.entries(AIRPORTS).map(([code,[name]]) => `<option value="${code}">${escape(name)}</option>`).join('');
     document.body.appendChild(list);
+    refreshAirportList();
+    $('lookup-availability').textContent = LOOKUP_URL && location.protocol !== 'file:'
+      ? 'Flight lookup connected' : 'Live flight lookup not connected yet';
     addLeg();
     $('add-leg').addEventListener('click', () => addLeg());
     $('fill-example').addEventListener('click', () => {
