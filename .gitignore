@@ -1,3 +1,5 @@
 node_modules/
+dist/
+worker/deploy.mjs
 .offline-package/
 .DS_Store

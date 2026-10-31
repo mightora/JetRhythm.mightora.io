@@ -426,7 +426,13 @@
     document.body.appendChild(list);
     refreshAirportList();
     $('lookup-availability').textContent = LOOKUP_URL && location.protocol !== 'file:'
-      ? 'Flight lookup connected' : 'Live flight lookup not connected yet';
+      ? 'Checking flight lookup…' : 'Offline: enter ticket times';
+    if (LOOKUP_URL && location.protocol !== 'file:') {
+      fetch('/api/status',{headers:{'Accept':'application/json'},cache:'no-store'})
+        .then(response => { if (!response.ok) throw new Error('Status unavailable'); return response.json(); })
+        .then(status => { $('lookup-availability').textContent = status.available ? 'Flight lookup ready' : 'Live lookup awaiting subscription'; })
+        .catch(() => { $('lookup-availability').textContent = 'Live lookup unavailable'; });
+    }
     addLeg();
     $('add-leg').addEventListener('click', () => addLeg());
     $('fill-example').addEventListener('click', () => {

@@ -1,5 +1,5 @@
 /* Offline application shell. Journey data remains in IndexedDB; never cache user data. */
-const CACHE = 'jetrhythm-shell-v2';
+const CACHE = 'jetrhythm-shell-v3';
 const SHELL = ['/', '/index.html', '/styles.css', '/core.js', '/airports.js', '/app.js', '/favicon.svg', '/mightora-logo.png', '/METHODOLOGY.html', '/privacy.html', '/network.html'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
