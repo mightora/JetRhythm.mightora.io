@@ -4,6 +4,7 @@ const path=require('node:path');
 const dist=path.resolve(__dirname,'../dist');
 const read=p=>fs.readFileSync(path.join(dist,p),'utf8');
 for(const required of ['index.html','styles.css','core.js','airports.js','app.js','robots.txt','sitemap.xml','favicon.svg','privacy.html','network.html','METHODOLOGY.html','downloads/JetRhythm-Offline.html','downloads/JetRhythm-Offline.zip'])assert.ok(fs.existsSync(path.join(dist,required)),required+' missing');
+assert.equal(fs.existsSync(path.join(dist,'CNAME')),false,'GitHub Pages CNAME should not be published');
 const html=read('index.html');
 assert.match(html,/<title>JetRhythm.*Jet Lag Calculator/);
 assert.match(html,/"@type":"WebApplication"/);

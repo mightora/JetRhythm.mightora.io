@@ -6,6 +6,8 @@ const source = path.join(base, 'src');
 const dist = path.join(base, 'dist');
 fs.mkdirSync(dist,{recursive:true});
 fs.cpSync(source,dist,{recursive:true,force:true});
+// The site has moved to Cloudflare; remove a stale GitHub Pages file from old builds.
+fs.rmSync(path.join(dist,'CNAME'),{force:true});
 fs.writeFileSync(path.join(dist,'.nojekyll'),'');
 
 const brand = 'https://raw.githubusercontent.com/mightora/mightora.io/main/static/images/mightoraIoLogo4-200x900.png';

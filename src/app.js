@@ -430,7 +430,10 @@
     if (LOOKUP_URL && location.protocol !== 'file:') {
       fetch('/api/status',{headers:{'Accept':'application/json'},cache:'no-store'})
         .then(response => { if (!response.ok) throw new Error('Status unavailable'); return response.json(); })
-        .then(status => { $('lookup-availability').textContent = status.available ? 'Flight lookup ready' : 'Live lookup awaiting subscription'; })
+        .then(status => {
+          $('lookup-availability').textContent = status.available ? 'Flight lookup ready' : 'Live lookup awaiting subscription';
+          if (!status.available) document.querySelectorAll('.manual-details').forEach(details => { details.open = true; });
+        })
         .catch(() => { $('lookup-availability').textContent = 'Live lookup unavailable'; });
     }
     addLeg();
