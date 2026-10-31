@@ -1,0 +1,28 @@
+sections:
+  - title: Explore
+    column: 1
+    position: 1
+    links:
+      - name: JetRhythm planner
+        url: https://jetrhythm.mightora.io/
+      - name: Mightora tools
+        url: https://mightora.io/
+  - title: About
+    column: 2
+    position: 1
+    links:
+      - name: Privacy
+        url: https://jetrhythm.mightora.io/privacy.html
+      - name: Methodology
+        url: https://jetrhythm.mightora.io/METHODOLOGY.html
+      - name: Source code
+        url: https://github.com/mightora/JetRhythm.mightora.io
+  - title: Research
+    column: 3
+    position: 1
+    links:
+      - name: CDC jet lag guidance
+        url: https://www.cdc.gov/yellow-book/hcp/travel-air-sea/jet-lag-disorder.html
+      - name: Network transparency
+        url: https://jetrhythm.mightora.io/network.html
+brands: []

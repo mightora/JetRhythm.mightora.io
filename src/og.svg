@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs><linearGradient id="g" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#102b32"/><stop offset="1" stop-color="#1b645e"/></linearGradient></defs>
+  <rect width="1200" height="630" fill="url(#g)"/>
+  <circle cx="1010" cy="305" r="240" fill="none" stroke="#c6f5da" stroke-opacity=".2" stroke-width="2"/>
+  <circle cx="1010" cy="305" r="155" fill="#236a67" stroke="#b9efca" stroke-width="12"/>
+  <path d="M1010 192v113l93 51" fill="none" stroke="#ffcc76" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="1010" cy="305" r="12" fill="white"/>
+  <text x="100" y="145" font-family="Arial,sans-serif" font-size="28" letter-spacing="6" fill="#b9efca">BY MIGHTORA</text>
+  <text x="100" y="300" font-family="Arial,sans-serif" font-weight="800" font-size="106" fill="white">JetRhythm</text>
+  <text x="100" y="383" font-family="Georgia,serif" font-size="58" fill="#b9efca">Arrive in sync.</text>
+  <text x="100" y="488" font-family="Arial,sans-serif" font-size="28" fill="#c9dfdc">Free jet lag calculator &amp; body clock planner</text>
+</svg>

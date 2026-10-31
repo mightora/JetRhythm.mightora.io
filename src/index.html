@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102b32">
+  <title>JetRhythm — Free Jet Lag Calculator & Body Clock Planner | Mightora</title>
+  <meta name="description" content="Plan your time zone adjustment with JetRhythm, a free private jet lag calculator. Get personalised sleep, sunlight and darkness guidance, multi-flight planning and offline access.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://jetrhythm.mightora.io/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="JetRhythm by Mightora">
+  <meta property="og:title" content="JetRhythm — arrive in sync">
+  <meta property="og:description" content="A free, privacy-first jet lag calculator. Plan light exposure, sleep and multi-leg journeys across time zones.">
+  <meta property="og:url" content="https://jetrhythm.mightora.io/">
+  <meta property="og:image" content="https://jetrhythm.mightora.io/og.svg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="JetRhythm — Free Jet Lag Calculator">
+  <meta name="twitter:description" content="Your travel plan, sleep timing and light guidance in one private browser tool.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/mightora/shared-ui@main/shared.css" data-online-only>
+  <link rel="stylesheet" href="styles.css">
+  <script type="application/ld+json">{
+    "@context":"https://schema.org", "@graph":[
+      {"@type":"WebApplication","name":"JetRhythm","applicationCategory":"HealthApplication","operatingSystem":"Any modern web browser","isAccessibleForFree":true,"url":"https://jetrhythm.mightora.io/","description":"Free jet lag calculator and educational body-clock planner for crossing time zones, with local-only journey storage and offline access.","creator":{"@type":"Person","name":"Ian Tweedie"},"publisher":{"@type":"Organization","name":"Mightora","url":"https://mightora.io"}},
+      {"@type":"FAQPage","mainEntity":[
+        {"@type":"Question","name":"How can I reduce jet lag when travelling east?","acceptedAnswer":{"@type":"Answer","text":"Gradually moving sleep earlier before departure and carefully timing bright light and darkness may help. The right light exposure depends on your internal body-clock phase, not simply the local time."}},
+        {"@type":"Question","name":"Does JetRhythm require an account?","acceptedAnswer":{"@type":"Answer","text":"No. JetRhythm runs its calculations in your browser and can save journeys locally on your device if you choose."}},
+        {"@type":"Question","name":"Can I plan a journey with connecting flights?","acceptedAnswer":{"@type":"Answer","text":"Yes. Add up to eight flight legs and JetRhythm will calculate time zones and a combined adjustment plan."}},
+        {"@type":"Question","name":"Does JetRhythm automatically look up flight numbers?","acceptedAnswer":{"@type":"Answer","text":"Flight numbers can be stored with journeys, but live flight lookup is not yet available. Departure and arrival times must currently be entered and checked manually."}}
+      ]}
+    ]}
+  </script>
+  <script data-online-only>
+    // Keep compatibility with the Mightora shared footer's occasionally mis-indented feed.
+    // A validated local footer.yaml is preferred, so no remote correction is usually needed.
+    (function () {
+      const nativeFetch = window.fetch;
+      window.fetch = function (resource, options) {
+        const address = typeof resource === 'string' ? resource : resource && resource.url || '';
+        if (!/footer\.yaml(?:\?|$)/.test(address)) return nativeFetch.apply(this, arguments);
+        return nativeFetch.apply(this, arguments).then(async response => {
+          if (!response.ok) return response;
+          const original = await response.text();
+          const corrected = original.replace(/^(\s+)-\s+(name|url|title|column|position):/gm,
+            (line, indent, key) => indent.length % 2 ? ' '.repeat(indent.length + 1) + '- ' + key + ':' : line);
+          return new Response(corrected, {status: response.status, statusText: response.statusText,
+            headers: response.headers});
+        });
+      };
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js" data-online-only defer></script>
+  <script src="https://cdn.jsdelivr.net/gh/mightora/shared-ui@main/components.js" data-online-only defer></script>
+  <script src="core.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <mightora-header site-name="JetRhythm" site-url="/" theme-key="jetrhythm-theme"
+    logo-light="https://raw.githubusercontent.com/mightora/mightora.io/main/static/images/mightoraIoLogo4-200x900.png"
+    logo-dark="https://raw.githubusercontent.com/mightora/mightora.io/main/static/images/mightoraIoLogo4-200x900.png"
+    nav-links='[{"label":"Planner","url":"#planner"},{"label":"How it works","url":"#science"},{"label":"FAQs","url":"#faqs"},{"label":"Privacy","url":"#privacy"}]'>
+    <div class="container header-inner offline-header-inner">
+      <a class="site-logo" href="#top" aria-label="JetRhythm home">
+        <img src="mightora-logo.png" alt="Mightora" class="site-logo-brand-img">
+        <span class="site-logo-divider" aria-hidden="true"></span><span class="site-logo-text">JetRhythm</span>
+      </a>
+      <button type="button" class="mobile-menu-btn offline-menu" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+      <nav class="header-nav" aria-label="Main navigation"><a href="#planner">Planner</a><a href="#science">How it works</a><a href="#faqs">FAQs</a><a href="#privacy">Privacy</a></nav>
+    </div>
+  </mightora-header>
+  <nav class="quick-jump-nav" aria-label="Page sections"><div class="container quick-jump-inner">
+    <a href="#planner">Create plan</a><a href="#results">Your schedule</a><a href="#saved">Saved journeys</a><a href="#science">The science</a><a href="#faqs">Questions</a>
+  </div></nav>
+  <main id="main">
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow"><span class="status-dot"></span> FREE, PRIVATE, SCIENCE-INFORMED</span>
+          <h1 id="hero-title">Cross time zones.<br><em>Keep your rhythm.</em></h1>
+          <p class="hero-lede">A clearer way to prepare for jet lag. Plan your sleep and light exposure, understand your body clock and arrive with a schedule that makes sense.</p>
+          <div class="hero-actions"><a class="btn btn-primary" href="#planner">Plan my journey <span aria-hidden="true">↗</span></a><a class="btn btn-quiet" href="#science">See how it works</a></div>
+          <div class="trust-strip"><span>✓ No account</span><span>✓ Your plans stay on your device</span><span>✓ Works offline</span></div>
+        </div>
+        <div class="hero-visual" aria-label="Illustration of a body clock shifting between sunset and sunrise" role="img">
+          <div class="visual-stars" aria-hidden="true">✦ <span>·</span> ✧</div>
+          <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+          <div class="clock-face"><span class="clock-sun">☀</span><span class="clock-hand"></span><span class="clock-center"></span><span class="clock-night">☾</span></div>
+          <div class="time-chip chip-top"><small>YOUR BODY CLOCK</small><strong>01:40</strong><span>Estimated biological time</span></div>
+          <div class="time-chip chip-bottom"><small>DESTINATION</small><strong>08:40</strong><span>Local time</span></div>
+          <div class="visual-caption">A day-by-day route back to feeling in sync</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="planner" class="section planner-section" aria-labelledby="planner-title">
+      <div class="container">
+        <div class="section-kicker">01 / CREATE YOUR PLAN</div>
+        <div class="section-heading"><div><h2 id="planner-title">Tell us about your journey</h2><p>No sign-in or uploads. All calculations run on this device.</p></div><span class="section-label">Usually 2–3 minutes</span></div>
+        <form id="plan-form" class="planner-card">
+          <div class="form-topline"><h3>Flight itinerary</h3><span class="form-hint">Enter airport codes and local times shown on your ticket</span></div>
+          <div id="flight-legs" class="flight-legs"></div>
+          <div class="form-actions-row"><button type="button" class="btn btn-outline" id="add-leg">＋ Add connecting flight</button><button type="button" class="text-button" id="fill-example">Load example journey</button></div>
+          <div class="form-divider"></div>
+          <div class="form-topline"><h3>Your usual sleep</h3><span class="form-hint">Use your routine before this trip</span></div>
+          <div class="form-grid">
+            <label class="field"><span>Usual bedtime</span><input required type="time" id="bed" value="23:00"></label>
+            <label class="field"><span>Usual wake-up</span><input required type="time" id="wake" value="07:00"></label>
+            <label class="field"><span>Adjustment pace</span><select id="pace"><option value="gentle">Gentle · about 30 min/day</option><option value="balanced" selected>Balanced · about 45 min/day</option><option value="focused">Focused · about 60 min/day</option></select></label>
+          </div>
+          <p class="microcopy">The pace is a modelling assumption, not a promise of how quickly your biology will change. Sleep and light recommendations are estimates.</p>
+          <div class="form-bottom"><p><span aria-hidden="true">🔒</span> Your flight details are not sent to JetRhythm or a flight-data provider.</p><button type="submit" class="btn btn-primary">Generate my plan <span aria-hidden="true">→</span></button></div>
+          <div id="form-message" role="alert" aria-live="assertive" hidden></div>
+        </form>
+      </div>
+    </section>
+
+    <section id="results" class="section results-section" aria-labelledby="results-title">
+      <div class="container"><div class="section-kicker">02 / YOUR BODY CLOCK</div>
+        <div class="section-heading"><div><h2 id="results-title">Your adjustment plan</h2><p id="results-intro">Enter your itinerary above to reveal your personalised schedule.</p></div></div>
+        <div id="result-placeholder" class="empty-state"><div class="empty-icon">◷</div><h3>A calmer arrival starts here</h3><p>Your timeline, light guidance and travel-day sleep suggestions will appear here once you create a plan.</p><a href="#planner" class="btn btn-outline">Create a plan</a></div>
+        <div id="plan-output" hidden>
+          <div id="summary" class="stat-grid"></div>
+          <div class="plan-toolbar"><button id="save-plan" class="btn btn-primary" type="button">Save on this device</button><button id="export-calendar" type="button" class="btn btn-outline">Download calendar (.ics)</button><button id="export-json" type="button" class="btn btn-outline">Export JSON</button><button id="print-plan" type="button" class="btn btn-quiet">Print plan</button></div>
+          <div class="results-layout"><div class="schedule-panel"><h3>Day-by-day schedule</h3><p class="panel-subtitle">All times displayed in the city/time zone indicated. Your biological clock is estimated and will vary.</p><div id="schedule-list"></div></div>
+          <aside class="flight-panel"><h3>Your flight windows</h3><p class="panel-subtitle">Sleep suggestions based on your destination's normal night.</p><div id="flight-suggestions"></div><div class="insight-note"><strong>Important</strong><p>Use this as educational travel planning guidance. Never sacrifice essential sleep or safety to follow a light window.</p></div></aside></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="saved" class="section saved-section" aria-labelledby="saved-title"><div class="container"><div class="section-kicker">03 / PICK UP WHERE YOU LEFT OFF</div><div class="section-heading"><div><h2 id="saved-title">Saved journeys</h2><p>Saved only in this browser, on this device. Export a copy before clearing browser data.</p></div><button type="button" id="import-plan" class="btn btn-outline">Import a journey</button><input type="file" id="import-file" accept="application/json,.json" hidden></div><div id="saved-list" class="saved-list"><p class="subtle">No journeys saved yet.</p></div><button type="button" id="clear-all" class="text-button danger-link" hidden>Delete all saved journeys</button></div></section>
+
+    <section id="science" class="section science-section" aria-labelledby="science-title"><div class="container"><div class="section-kicker">THE WHY BEHIND THE PLAN</div><div class="section-heading"><div><h2 id="science-title">Jet lag is a body clock problem</h2><p>It's not just a lack of sleep. After a long flight, your internal day can be out of step with the sun.</p></div></div><div class="science-grid">
+      <article class="science-card"><span class="science-number">01</span><span class="science-symbol">☀</span><h3>Light moves your clock</h3><p>Bright light can move your body clock earlier or later depending on when your internal night occurs. Wrongly timed light may delay adjustment.</p></article>
+      <article class="science-card"><span class="science-number">02</span><span class="science-symbol">☾</span><h3>Darkness matters too</h3><p>Reducing light at certain times protects the shift you are trying to make. Sleep is important, but sleep timing alone does not fully explain jet lag.</p></article>
+      <article class="science-card"><span class="science-number">03</span><span class="science-symbol">◷</span><h3>Make room to adapt</h3><p>Gradual schedule shifts before departure may help. Your chronotype, recent sleep, natural light and travel conditions will affect the outcome.</p></article>
+    </div><div class="source-panel"><div><strong>Transparent, research-informed, and independent</strong><p>Our original planning model uses published circadian principles. It estimates body-clock timing from self-reported sleep, without measuring melatonin onset or core body temperature. It is not clinically validated, medical advice, or affiliated with other jet lag applications.</p></div><div class="source-links"><a href="https://www.cdc.gov/yellow-book/hcp/travel-air-sea/jet-lag-disorder.html" rel="noopener noreferrer" target="_blank">Read CDC guidance ↗</a><a href="METHODOLOGY.html">Model and limitations ↗</a></div></div></div></section>
+
+    <section id="faqs" class="section faq-section" aria-labelledby="faq-title"><div class="container narrow"><div class="section-kicker">COMMON QUESTIONS</div><h2 id="faq-title">A few things to know</h2>
+      <details><summary>How do I reduce jet lag when travelling east?</summary><p>Moving your sleep schedule earlier before travel may help. Timed light exposure is important, but the correct time depends on your estimated biological night. For large time changes, simply seeking light early in the morning can be counterproductive.</p></details>
+      <details><summary>What about travelling west?</summary><p>Westward trips usually call for delaying your internal clock. Evening light can help with some shifts, but personalised timing and the number of time zones crossed matter.</p></details>
+      <details><summary>Can I enter flight numbers?</summary><p>Yes. Add flight numbers to identify each leg. Live lookup is not yet available, so please enter and verify all flight times manually. Flight numbers and dates are stored only if you choose to save a journey.</p></details>
+      <details><summary>How accurate are the recommendations?</summary><p>They are approximations based on your usual sleep and the published principles of circadian phase shifting. They cannot measure your internal clock or predict precisely when you will recover. Illness, sleep loss, light exposure and individual differences affect results.</p></details>
+      <details><summary>Do I need melatonin or sleeping tablets?</summary><p>No. JetRhythm does not prescribe medication or generate individual melatonin doses. Ask a qualified clinician or pharmacist before considering it, particularly if you take medicines or have a medical condition.</p></details>
+      <details><summary>Do you send my itinerary to a server?</summary><p>No. The calculator runs locally. When you explicitly save a plan, it goes into your browser's storage. Normal website and third-party asset requests may still be visible to the hosting and asset providers; see the privacy information below.</p></details>
+    </div></section>
+
+    <section id="privacy" class="section privacy-section" aria-labelledby="privacy-title"><div class="container privacy-grid"><div><div class="section-kicker">YOUR DEVICE, YOUR DATA</div><h2 id="privacy-title">Private by design</h2><p>JetRhythm requires no account. Trip calculations happen in your browser. Saved journeys are kept locally and can be exported or deleted at any time. No tracking or advertising cookies are set by JetRhythm.</p></div><div class="privacy-card"><h3>What leaves your browser?</h3><p>The online version requests page files from hosting and shared Mightora assets from GitHub/jsDelivr. These providers may process standard connection information. No itinerary data is included in those requests.</p><p><a href="privacy.html">Full privacy and local storage notice ↗</a> · <a href="network.html">Network transparency ↗</a></p><p><a href="downloads/JetRhythm-Offline.html" download>Download offline HTML ↗</a> · <a href="downloads/JetRhythm-Offline.zip" download>Offline ZIP ↗</a></p><button id="forget-theme" type="button" class="text-button">Forget my appearance preference</button></div></div></section>
+  </main>
+  <div class="container badge-row" aria-label="Project quality and licensing">
+    <a href="https://github.com/mightora/JetRhythm.mightora.io/actions/workflows/ci.yml"><img src="https://github.com/mightora/JetRhythm.mightora.io/actions/workflows/ci.yml/badge.svg" alt="Automated tests status"></a>
+    <a href="https://github.com/mightora/JetRhythm.mightora.io/actions/workflows/codeql.yml"><img src="https://github.com/mightora/JetRhythm.mightora.io/actions/workflows/codeql.yml/badge.svg" alt="CodeQL analysis status"></a>
+    <a href="https://github.com/mightora/JetRhythm.mightora.io/blob/main/LICENSE"><img src="https://img.shields.io/github/license/mightora/JetRhythm.mightora.io" alt="Open source licence"></a>
+    <a href="https://github.com/mightora/JetRhythm.mightora.io"><img src="https://img.shields.io/badge/source-GitHub-243442" alt="View source on GitHub"></a>
+    <p>The source is open to independent inspection. Badges link to live repository evidence, not security guarantees.</p>
+  </div>
+  <mightora-author><div class="author-section-overlay"><div class="author-section-inner"><div class="author-photos"><img src="https://techtweedie.github.io/images/author/ian-tweedie-sq2_hu_a380911c6f4726de.png" alt="Ian Tweedie" class="author-avatar"></div><div class="author-text"><h2 class="author-heading">Built by TechTweedie</h2><p class="author-bio">JetRhythm is a free, open-source tool created by Ian Tweedie, also known as TechTweedie. Ian builds practical tools through Mightora to help people make informed decisions with clear, accessible technology.</p><div class="author-links"><a href="https://techtweedie.github.io" target="_blank" rel="noopener" class="author-link">Blog</a><a href="https://github.com/itweedie" target="_blank" rel="noopener" class="author-link">GitHub</a></div></div></div></div></mightora-author>
+  <mightora-footer><div class="container"><div class="footer-bottom"><div class="footer-copy">© <span class="footer-year">2026</span> <a href="https://mightora.io">Mightora</a>. JetRhythm is independent educational software.</div><div class="footer-bottom-links"><a href="privacy.html">Privacy</a><a href="METHODOLOGY.html">Methodology</a><a href="https://github.com/mightora/JetRhythm.mightora.io">Source</a></div></div></div></mightora-footer>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

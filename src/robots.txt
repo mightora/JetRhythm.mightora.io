@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://jetrhythm.mightora.io/sitemap.xml

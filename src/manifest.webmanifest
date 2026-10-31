@@ -1,0 +1,11 @@
+{
+  "name": "JetRhythm by Mightora — Jet Lag Planner",
+  "short_name": "JetRhythm",
+  "description": "Private, offline-capable jet lag planning and body clock estimates.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fbf9",
+  "theme_color": "#102b32",
+  "icons": [{"src":"favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]
+}
